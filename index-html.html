@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Answer Helper</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Answer Helper</h1>
+    </header>
+
+    <div class="chat-container">
+        <div class="difficulty-selector">
+            <div>
+                <label for="difficulty">Difficulty:</label>
+                <select id="difficulty">
+                    <option value="easy">Easy</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="hard">Hard</option>
+                </select>
+            </div>
+            <div>
+                <label for="category">Category:</label>
+                <select id="category">
+                    <option value="workplace">Workplace</option>
+                    <option value="social">Social</option>
+                    <option value="family">Family</option>
+                    <option value="random" selected>Random</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="chatHistory"></div>
+
+        <div class="situation-container" id="currentSituation">
+            <div class="situation-header">Daily Situation</div>
+            <div class="situation-text" id="situationText">Click "Generate New Situation" to start.</div>
+            <div class="options-container" id="optionsContainer"></div>
+            <div class="feedback" id="feedback"></div>
+            <div class="controls">
+                <button id="generateBtn">Generate New Situation</button>
+                <button id="submitBtn" style="display: none; margin-left: 10px;">Submit Answer</button>
+            </div>
+        </div>
+
+        <div class="loading" id="loadingIndicator" style="display: none;">
+            <div class="loading-dots">
+                <div></div>
+                <div></div>
+                <div></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="situations-db.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
