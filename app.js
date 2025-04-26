@@ -8,6 +8,7 @@ const submitBtn = document.getElementById('submitBtn');
 const loadingIndicator = document.getElementById('loadingIndicator');
 const difficultySelect = document.getElementById('difficulty');
 const categorySelect = document.getElementById('category');
+const logo = document.getElementById("logo");
 
 // Application state
 let currentSituation = null;
@@ -209,3 +210,29 @@ function addToHistory(situation) {
     // Insert at the beginning of the history
     chatHistory.insertBefore(historyItem, chatHistory.firstChild);
 }
+
+// Reset the app to initial state
+function resetApp() {
+  // Clear chat history
+  chatHistory.innerHTML = "";
+
+  // Reset current situation
+  currentSituation = null;
+  selectedOptionIndex = null;
+
+  // Reset UI elements
+  situationText.textContent = "Click 'Generate New Situation' to start.";
+  feedbackEl.style.display = "none";
+  optionsContainer.innerHTML = "";
+  submitBtn.disabled = false;
+
+  // Reset the used situations array to allow all situations to be used again
+  usedSituations = [];
+
+  // Set difficulty and category back to default
+  difficultySelect.value = "medium";
+  categorySelect.value = "random";
+}
+
+// Event listener for logo click to reset the app
+logo.addEventListener("click", resetApp);
