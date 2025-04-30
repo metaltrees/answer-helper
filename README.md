@@ -38,7 +38,7 @@ answer-helper/
 
 ### GitHub Pages
 
-This project is deployed using GitHub Pages at: [https://yourusername.github.io/answer-helper](https://yourusername.github.io/answer-helper)
+This project is deployed using GitHub Pages at: (https://metaltrees.github.io/answer-helper/)
 
 ## Future Enhancements
 
