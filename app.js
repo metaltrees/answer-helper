@@ -1,238 +1,439 @@
+// Social Intelligence Test - Main Application
+// Psychological test style: 10 questions, then AI-generated advice
+
+// ============================================
+// Configuration
+// ============================================
+const CONFIG = {
+    TOTAL_QUESTIONS: 10,
+    API_ENDPOINT: 'YOUR_API_GATEWAY_ENDPOINT_HERE', // Replace after deploying Lambda
+    USE_MOCK_API: true // Set to false when backend is ready
+};
+
+// ============================================
+// Application State
+// ============================================
+let state = {
+    currentQuestion: 0,
+    answers: [],
+    currentSituation: null,
+    selectedOption: null,
+    category: 'random',
+    usedQuestionIds: [],
+    isComplete: false,
+    isLoading: false,
+    aiAdvice: null
+};
+
+// ============================================
 // DOM Elements
-const chatHistory = document.getElementById('chatHistory');
-const situationText = document.getElementById('situationText');
-const optionsContainer = document.getElementById('optionsContainer');
-const feedbackEl = document.getElementById('feedback');
-const generateBtn = document.getElementById('generateBtn');
-const submitBtn = document.getElementById('submitBtn');
-const loadingIndicator = document.getElementById('loadingIndicator');
-const difficultySelect = document.getElementById('difficulty');
-const categorySelect = document.getElementById('category');
-const logo = document.getElementById("logo");
+// ============================================
+const elements = {
+    // Screens
+    startScreen: document.getElementById('startScreen'),
+    testScreen: document.getElementById('testScreen'),
+    loadingScreen: document.getElementById('loadingScreen'),
+    resultsScreen: document.getElementById('resultsScreen'),
+    
+    // Start screen
+    categorySelect: document.getElementById('categorySelect'),
+    startBtn: document.getElementById('startBtn'),
+    
+    // Test screen
+    progressBar: document.getElementById('progressBar'),
+    progressText: document.getElementById('progressText'),
+    categoryBadge: document.getElementById('categoryBadge'),
+    situationText: document.getElementById('situationText'),
+    optionsContainer: document.getElementById('optionsContainer'),
+    nextBtn: document.getElementById('nextBtn'),
+    
+    // Results screen
+    scoreDisplay: document.getElementById('scoreDisplay'),
+    aiAdviceContent: document.getElementById('aiAdviceContent'),
+    retryBtn: document.getElementById('retryBtn')
+};
 
-// Application state
-let currentSituation = null;
-let selectedOptionIndex = null;
-let usedSituations = [];
-
-// Generate new situation
-generateBtn.addEventListener('click', async () => {
-    try {
-        setLoading(true);
-        
-        // Add any existing situation to history
-        if (currentSituation) {
-            addToHistory(currentSituation);
-        }
-        
-        // Reset the UI state
-        selectedOptionIndex = null;
-        optionsContainer.innerHTML = '';
-        feedbackEl.style.display = 'none';
-        submitBtn.style.display = 'none';
-        
-        // Get selected difficulty and category
-        const difficulty = difficultySelect.value;
-        const category = categorySelect.value;
-        
-        // Generate new situation
-        currentSituation = generateSituation(difficulty, category);
-        
-        // Display the new situation
-        displaySituation(currentSituation);
-        
-        submitBtn.style.display = 'inline-block';
-    } catch (error) {
-        console.error('Error generating situation:', error);
-        situationText.textContent = 'Error generating situation. Please try again.';
-    } finally {
-        setLoading(false);
+// ============================================
+// Utility Functions
+// ============================================
+function shuffleArray(array) {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-});
-
-// Submit answer
-submitBtn.addEventListener('click', async () => {
-    if (selectedOptionIndex === null) {
-        alert('Please select an answer before submitting.');
-        return;
-    }
-
-    try {
-        setLoading(true);
-        
-        // Evaluate the answer
-        const result = evaluateAnswer(currentSituation, selectedOptionIndex);
-        
-        // Update the UI with the result
-        displayResult(result);
-        
-        // Disable the submit button after submission
-        submitBtn.disabled = true;
-    } catch (error) {
-        console.error('Error evaluating answer:', error);
-        feedbackEl.textContent = 'Error evaluating your answer. Please try again.';
-        feedbackEl.style.display = 'block';
-    } finally {
-        setLoading(false);
-    }
-});
-
-// Helper function to set loading state
-function setLoading(isLoading) {
-    loadingIndicator.style.display = isLoading ? 'flex' : 'none';
-    generateBtn.disabled = isLoading;
-    submitBtn.disabled = isLoading;
+    return shuffled;
 }
 
-// Generate a new situation from our database
-function generateSituation(difficulty, category) {
-    // Filter situations by difficulty and category
-    const availableSituations = situationsDatabase[category].filter(s => s.difficulty === difficulty);
+function showScreen(screenName) {
+    // Hide all screens
+    elements.startScreen.classList.add('hidden');
+    elements.testScreen.classList.add('hidden');
+    elements.loadingScreen.classList.add('hidden');
+    elements.resultsScreen.classList.add('hidden');
     
-    // If no situations match or all have been used, reset used situations
-    if (availableSituations.length === 0 || availableSituations.every(s => usedSituations.includes(s))) {
-        usedSituations = [];
+    // Show requested screen
+    switch(screenName) {
+        case 'start':
+            elements.startScreen.classList.remove('hidden');
+            break;
+        case 'test':
+            elements.testScreen.classList.remove('hidden');
+            break;
+        case 'loading':
+            elements.loadingScreen.classList.remove('hidden');
+            break;
+        case 'results':
+            elements.resultsScreen.classList.remove('hidden');
+            break;
     }
-    
-    // Filter out situations that have been used already
-    const unusedSituations = availableSituations.filter(s => !usedSituations.includes(s));
-    
-    // If all situations have been used, reset used situations
-    const situationsToChooseFrom = unusedSituations.length > 0 ? unusedSituations : availableSituations;
-    
-    // Randomly select a situation
-    const randomIndex = Math.floor(Math.random() * situationsToChooseFrom.length);
-    const selectedSituation = situationsToChooseFrom[randomIndex];
-    
-    // Add to used situations
-    usedSituations.push(selectedSituation);
-    
-    return selectedSituation;
 }
 
-// Evaluate the user's answer - simplified version
-function evaluateAnswer(situation, selectedIndex) {
-    return {
-        isCorrect: selectedIndex === situation.correctIndex,
-        explanation: situation.explanation
+function getCategoryDisplayName(category) {
+    const names = {
+        'workplace': 'Workplace',
+        'social': 'Social',
+        'family': 'Family',
+        'random': 'Mixed'
     };
+    return names[category] || category;
 }
 
-// Display the situation in the UI
-function displaySituation(situation) {
-    situationText.textContent = situation.situation;
+// ============================================
+// Game Logic
+// ============================================
+function getAvailableSituations() {
+    let situations;
     
-    optionsContainer.innerHTML = '';
-    situation.options.forEach((option, index) => {
+    if (state.category === 'random') {
+        situations = [...situationsDatabase.random];
+    } else {
+        situations = [...situationsDatabase[state.category]];
+    }
+    
+    // Filter out already used questions
+    return situations.filter(s => !state.usedQuestionIds.includes(s.id));
+}
+
+function selectNextSituation() {
+    const available = getAvailableSituations();
+    
+    if (available.length === 0) {
+        // Reset if we've used all questions (shouldn't happen with 15 questions and 10 needed)
+        state.usedQuestionIds = [];
+        return selectNextSituation();
+    }
+    
+    // Random selection
+    const randomIndex = Math.floor(Math.random() * available.length);
+    const situation = available[randomIndex];
+    
+    state.usedQuestionIds.push(situation.id);
+    return situation;
+}
+
+function updateProgressBar() {
+    const progress = (state.currentQuestion / CONFIG.TOTAL_QUESTIONS) * 100;
+    elements.progressBar.style.width = `${progress}%`;
+    elements.progressText.textContent = `Question ${state.currentQuestion + 1} of ${CONFIG.TOTAL_QUESTIONS}`;
+}
+
+function displaySituation() {
+    state.currentSituation = selectNextSituation();
+    state.selectedOption = null;
+    
+    // Update category badge
+    const situationCategory = state.currentSituation.category || state.category;
+    elements.categoryBadge.textContent = getCategoryDisplayName(situationCategory);
+    
+    // Update situation text
+    elements.situationText.textContent = state.currentSituation.situation;
+    
+    // Create options
+    elements.optionsContainer.innerHTML = '';
+    state.currentSituation.options.forEach((option, index) => {
         const optionEl = document.createElement('div');
         optionEl.className = 'option';
-        optionEl.textContent = option;
-        optionEl.dataset.index = index;
-        
-        optionEl.addEventListener('click', () => {
-            // Remove selected class from all options
-            document.querySelectorAll('.option').forEach(opt => {
-                opt.classList.remove('selected');
-            });
-            
-            // Add selected class to clicked option
-            optionEl.classList.add('selected');
-            selectedOptionIndex = index;
+        optionEl.innerHTML = `
+            <span class="option-letter">${String.fromCharCode(65 + index)}</span>
+            <span class="option-text">${option}</span>
+        `;
+        optionEl.addEventListener('click', () => selectOption(index, optionEl));
+        elements.optionsContainer.appendChild(optionEl);
+    });
+    
+    // Disable next button until an option is selected
+    elements.nextBtn.disabled = true;
+    updateProgressBar();
+}
+
+function selectOption(index, optionElement) {
+    // Remove selection from all options
+    document.querySelectorAll('.option').forEach(opt => {
+        opt.classList.remove('selected');
+    });
+    
+    // Select clicked option
+    optionElement.classList.add('selected');
+    state.selectedOption = index;
+    
+    // Enable next button
+    elements.nextBtn.disabled = false;
+}
+
+function recordAnswer() {
+    if (state.selectedOption === null) return;
+    
+    const answer = {
+        questionId: state.currentSituation.id,
+        category: state.currentSituation.category,
+        situation: state.currentSituation.situation,
+        options: state.currentSituation.options,
+        selectedIndex: state.selectedOption,
+        correctIndex: state.currentSituation.correctIndex,
+        isCorrect: state.selectedOption === state.currentSituation.correctIndex,
+        traits: state.currentSituation.traits
+    };
+    
+    state.answers.push(answer);
+}
+
+function nextQuestion() {
+    recordAnswer();
+    state.currentQuestion++;
+    
+    if (state.currentQuestion >= CONFIG.TOTAL_QUESTIONS) {
+        // Test complete - get AI analysis
+        completeTest();
+    } else {
+        displaySituation();
+    }
+}
+
+// ============================================
+// API Integration
+// ============================================
+async function getAIAdvice() {
+    if (CONFIG.USE_MOCK_API) {
+        // Mock response for development
+        return await getMockAdvice();
+    }
+    
+    try {
+        const response = await fetch(CONFIG.API_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ answers: state.answers })
         });
         
-        optionsContainer.appendChild(optionEl);
-    });
-}
-
-// Display the evaluation result
-function displayResult(result) {
-    const options = document.querySelectorAll('.option');
-    
-    // Mark the correct answer
-    options[currentSituation.correctIndex].classList.add('correct');
-    
-    // If the selected option is not correct, mark it as wrong
-    if (selectedOptionIndex !== currentSituation.correctIndex) {
-        options[selectedOptionIndex].classList.add('wrong');
-    }
-    
-    // Display the explanation
-    feedbackEl.textContent = result.explanation;
-    feedbackEl.style.display = 'block';
-}
-
-// Add a situation to the history
-function addToHistory(situation) {
-    const historyItem = document.createElement('div');
-    historyItem.className = 'history-item situation-container';
-    
-    const situationHeader = document.createElement('div');
-    situationHeader.className = 'situation-header';
-    situationHeader.textContent = 'Previous Situation';
-    
-    const situationTextEl = document.createElement('div');
-    situationTextEl.className = 'situation-text';
-    situationTextEl.textContent = situation.situation;
-    
-    const optionsContainerEl = document.createElement('div');
-    optionsContainerEl.className = 'options-container';
-    
-    situation.options.forEach((option, index) => {
-        const optionEl = document.createElement('div');
-        optionEl.className = 'option';
-        
-        // Add the correct/wrong class if this situation had a submitted answer
-        if (selectedOptionIndex !== null) {
-            if (index === situation.correctIndex) {
-                optionEl.classList.add('correct');
-            } else if (index === selectedOptionIndex && selectedOptionIndex !== situation.correctIndex) {
-                optionEl.classList.add('wrong');
-            }
+        if (!response.ok) {
+            throw new Error('API request failed');
         }
         
-        optionEl.textContent = option;
-        optionsContainerEl.appendChild(optionEl);
+        const data = await response.json();
+        return data.advice;
+    } catch (error) {
+        console.error('Error getting AI advice:', error);
+        return getFallbackAdvice();
+    }
+}
+
+async function getMockAdvice() {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const correctCount = state.answers.filter(a => a.isCorrect).length;
+    const categoryBreakdown = analyzeByCategory();
+    
+    return `
+## Your Social Intelligence Profile
+
+Based on your responses to ${CONFIG.TOTAL_QUESTIONS} scenarios, here's your personalized analysis:
+
+### Overall Score: ${correctCount}/${CONFIG.TOTAL_QUESTIONS} (${Math.round(correctCount/CONFIG.TOTAL_QUESTIONS * 100)}%)
+
+### Strengths 💪
+${getStrengthsText(categoryBreakdown)}
+
+### Areas for Growth 🌱
+${getGrowthAreasText(categoryBreakdown)}
+
+### Key Insight 💡
+${getKeyInsight(categoryBreakdown)}
+
+### Actionable Tip 🎯
+${getActionableTip(categoryBreakdown)}
+
+---
+*This analysis is generated based on established social intelligence research. Consider retaking the test with different categories to explore other aspects of your interpersonal skills.*
+    `.trim();
+}
+
+function analyzeByCategory() {
+    const categories = { workplace: [], social: [], family: [] };
+    
+    state.answers.forEach(answer => {
+        if (categories[answer.category]) {
+            categories[answer.category].push(answer);
+        }
     });
     
-    historyItem.appendChild(situationHeader);
-    historyItem.appendChild(situationTextEl);
-    historyItem.appendChild(optionsContainerEl);
-    
-    // Add explanation if it was revealed
-    if (feedbackEl.style.display !== 'none') {
-        const feedbackCopy = document.createElement('div');
-        feedbackCopy.className = 'feedback';
-        feedbackCopy.textContent = situation.explanation;
-        feedbackCopy.style.display = 'block';
-        historyItem.appendChild(feedbackCopy);
+    const breakdown = {};
+    for (const [cat, answers] of Object.entries(categories)) {
+        if (answers.length > 0) {
+            const correct = answers.filter(a => a.isCorrect).length;
+            breakdown[cat] = {
+                total: answers.length,
+                correct: correct,
+                percentage: Math.round((correct / answers.length) * 100)
+            };
+        }
     }
     
-    // Insert at the beginning of the history
-    chatHistory.insertBefore(historyItem, chatHistory.firstChild);
+    return breakdown;
 }
 
-// Reset the app to initial state
-function resetApp() {
-  // Clear chat history
-  chatHistory.innerHTML = "";
-
-  // Reset current situation
-  currentSituation = null;
-  selectedOptionIndex = null;
-
-  // Reset UI elements
-  situationText.textContent = "Click 'Generate New Situation' to start.";
-  feedbackEl.style.display = "none";
-  optionsContainer.innerHTML = "";
-  submitBtn.disabled = false;
-
-  // Reset the used situations array to allow all situations to be used again
-  usedSituations = [];
-
-  // Set difficulty and category back to default
-  difficultySelect.value = "medium";
-  categorySelect.value = "random";
+function getStrengthsText(breakdown) {
+    const strengths = [];
+    
+    for (const [cat, data] of Object.entries(breakdown)) {
+        if (data.percentage >= 70) {
+            strengths.push(`- **${getCategoryDisplayName(cat)} situations**: You showed strong judgment in ${data.correct}/${data.total} scenarios. You understand how to navigate these contexts effectively.`);
+        }
+    }
+    
+    if (strengths.length === 0) {
+        const bestCat = Object.entries(breakdown).sort((a, b) => b[1].percentage - a[1].percentage)[0];
+        if (bestCat) {
+            strengths.push(`- **${getCategoryDisplayName(bestCat[0])} situations**: This is your strongest area with ${bestCat[1].percentage}% optimal responses.`);
+        }
+    }
+    
+    return strengths.join('\n') || '- You showed thoughtfulness in considering different perspectives across scenarios.';
 }
 
-// Event listener for logo click to reset the app
-logo.addEventListener("click", resetApp);
+function getGrowthAreasText(breakdown) {
+    const areas = [];
+    
+    for (const [cat, data] of Object.entries(breakdown)) {
+        if (data.percentage < 50) {
+            areas.push(`- **${getCategoryDisplayName(cat)} situations**: Consider practicing more assertive yet diplomatic approaches. You scored ${data.correct}/${data.total} in this area.`);
+        }
+    }
+    
+    if (areas.length === 0) {
+        return '- Continue developing your awareness of how timing and context affect the best response to social situations.';
+    }
+    
+    return areas.join('\n');
+}
+
+function getKeyInsight(breakdown) {
+    const correctCount = state.answers.filter(a => a.isCorrect).length;
+    
+    if (correctCount >= 8) {
+        return 'You demonstrate strong social intelligence across multiple contexts. Your responses show a good balance of assertiveness and empathy.';
+    } else if (correctCount >= 5) {
+        return 'You have a solid foundation in social intelligence. Focus on situations where direct communication might feel uncomfortable—these often have the best outcomes.';
+    } else {
+        return 'Social intelligence is a skill that develops with practice. Many of your responses leaned toward either avoidance or confrontation—finding the middle ground of "diplomatic directness" is key.';
+    }
+}
+
+function getActionableTip(breakdown) {
+    const tips = [
+        'This week, practice one direct conversation you\'ve been avoiding. Frame it with "I" statements and focus on specific behaviors rather than character judgments.',
+        'Before responding to a challenging situation, pause and consider: "What outcome do I actually want here?" This helps align your response with your goals.',
+        'Try the "private first" approach: Address issues one-on-one before they become public conflicts. This preserves relationships while still addressing problems.'
+    ];
+    
+    return tips[Math.floor(Math.random() * tips.length)];
+}
+
+function getFallbackAdvice() {
+    const correctCount = state.answers.filter(a => a.isCorrect).length;
+    return `
+## Test Complete!
+
+You answered ${correctCount} out of ${CONFIG.TOTAL_QUESTIONS} questions optimally.
+
+We couldn't connect to the AI analysis service at this time. Please try again later for personalized insights, or review your answers to reflect on the scenarios where you might approach things differently.
+    `.trim();
+}
+
+// ============================================
+// Test Flow
+// ============================================
+function startTest() {
+    // Reset state
+    state = {
+        currentQuestion: 0,
+        answers: [],
+        currentSituation: null,
+        selectedOption: null,
+        category: elements.categorySelect.value,
+        usedQuestionIds: [],
+        isComplete: false,
+        isLoading: false,
+        aiAdvice: null
+    };
+    
+    showScreen('test');
+    displaySituation();
+}
+
+async function completeTest() {
+    state.isComplete = true;
+    showScreen('loading');
+    
+    // Get AI advice
+    state.aiAdvice = await getAIAdvice();
+    
+    // Display results
+    displayResults();
+}
+
+function displayResults() {
+    const correctCount = state.answers.filter(a => a.isCorrect).length;
+    
+    // Update score display
+    elements.scoreDisplay.textContent = `${correctCount}/${CONFIG.TOTAL_QUESTIONS}`;
+    
+    // Render AI advice as HTML (simple markdown parsing)
+    elements.aiAdviceContent.innerHTML = parseMarkdown(state.aiAdvice);
+    
+    showScreen('results');
+}
+
+function parseMarkdown(text) {
+    return text
+        .replace(/## (.*)/g, '<h2>$1</h2>')
+        .replace(/### (.*)/g, '<h3>$1</h3>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/^- (.*)/gm, '<li>$1</li>')
+        .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>')
+        .replace(/---/g, '<hr>');
+}
+
+function retryTest() {
+    showScreen('start');
+}
+
+// ============================================
+// Event Listeners
+// ============================================
+elements.startBtn.addEventListener('click', startTest);
+elements.nextBtn.addEventListener('click', nextQuestion);
+elements.retryBtn.addEventListener('click', retryTest);
+
+// ============================================
+// Initialize
+// ============================================
+document.addEventListener('DOMContentLoaded', () => {
+    showScreen('start');
+});
