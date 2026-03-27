@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Test your social intelligence with 10 real-world scenarios and get personalized AI-powered insights.">
+    <title>Social Intelligence Test</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1>
+                <span class="header-icon">🧠</span>
+                Social Intelligence Test
+            </h1>
+            <p>Discover your interpersonal strengths</p>
+        </header>
+
+        <!-- Start Screen -->
+        <main id="startScreen" class="screen">
+            <div class="start-content">
+                <div class="card">
+                    <div class="intro-text">
+                        <h2>How Would You Handle It?</h2>
+                        <p>Answer 10 real-world scenarios to discover your social intelligence profile and receive personalized insights.</p>
+                    </div>
+                    
+                    <div class="feature-list">
+                        <div class="feature-item">
+                            <span class="feature-icon">📊</span>
+                            <span>10 scenario-based questions</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">🤖</span>
+                            <span>AI-powered personalized analysis</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">💡</span>
+                            <span>Actionable improvement tips</span>
+                        </div>
+                    </div>
+                    
+                    <div class="category-selector">
+                        <label for="categorySelect">Choose your focus area:</label>
+                        <select id="categorySelect">
+                            <option value="random">🎲 Mixed (All Categories)</option>
+                            <option value="workplace">💼 Workplace Situations</option>
+                            <option value="social">👥 Social Situations</option>
+                            <option value="family">👨‍👩‍👧‍👦 Family Situations</option>
+                        </select>
+                    </div>
+                    
+                    <button id="startBtn" class="btn btn-primary">
+                        Start Test →
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Test Screen -->
+        <div id="testScreen" class="screen hidden">
+            <!-- Progress Bar -->
+            <div class="progress-container">
+                <div class="progress-header">
+                    <span id="progressText" class="progress-text">Question 1 of 10</span>
+                    <span id="categoryBadge" class="category-badge">Mixed</span>
+                </div>
+                <div class="progress-bar-track">
+                    <div id="progressBar" class="progress-bar-fill"></div>
+                </div>
+            </div>
+            
+            <!-- Situation Card -->
+            <div class="card situation-card">
+                <p id="situationText" class="situation-text">
+                    Loading situation...
+                </p>
+            </div>
+            
+            <!-- Options -->
+            <div id="optionsContainer" class="options-container">
+                <!-- Options will be dynamically inserted -->
+            </div>
+            
+            <!-- Next Button -->
+            <button id="nextBtn" class="btn btn-primary" disabled>
+                Next Question →
+            </button>
+        </div>
+
+        <!-- Loading Screen -->
+        <div id="loadingScreen" class="screen hidden">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <h2>Analyzing Your Responses</h2>
+                <p>Our AI is generating your personalized insights...</p>
+                <div class="loading-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="resultsScreen" class="screen hidden">
+            <div class="results-header">
+                <h2>Your Results</h2>
+                <div id="scoreDisplay" class="score-display">0/10</div>
+            </div>
+            
+            <div id="aiAdviceContent" class="advice-card">
+                <!-- AI advice will be inserted here -->
+            </div>
+            
+            <div class="retry-section">
+                <button id="retryBtn" class="btn btn-primary">
+                    🔄 Take Another Test
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="situations-db.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
